@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>Document</title>
+</head>
+<body>
+  <div id="container"></div>
+  <script src="./js/react-dom.js"></script>
+  <script src="./js/react.js"></script>
+  <script>
+    let container=document.getElementById('container');
+    // React.render('hello world',document.getElementById('container'));
+    // function hello(){
+    //   alert('hello');
+    // }
+    // let el=React.createElement('div',{id:"test",onclick:hello},'click me');
+    // React.render(el,document.getElementById('container'))
+    // var HelloMessage = React.createClass({
+    //   getInitialState: function () {
+    //     return { type: 'say:' };
+    //   },
+    //   componentWillMount: function () {
+    //     console.log('我就要开始渲染了。。。')
+    //   },
+    //   componentDidMount: function () {
+    //     console.log('我已经渲染好了。。。')
+    //   },
+    //   render: function () {
+    //     return React.createElement("div", null, this.state.type, "Hello ", this.props.name);
+    //   }
+    // });
+    class HelloMessage extends ReactClass{
+      getInitialState(){
+        return { type: 'say:' };
+      }
+      componentWillMount(){
+        console.log('我就要开始渲染了。。。')
+      }
+      componentDidMount(){
+        console.log('我已经渲染好了。。。')
+      }
+      render(){
+        return React.createElement("div", null, this.state.type, "Hello ", this.props.name);
+      }
+    }
+  React.render(React.createElement(HelloMessage, {name: "John"}),container);
+  </script>
+</body>
+</html>
