@@ -14,7 +14,6 @@ const UPATE_TYPES = {
 }
 Object.freeze(UPATE_TYPES);
 
-
 const _shouldUpdateReactComponent = (prevElement, nextElement) => {
   if (prevElement != null && nextElement != null) {
     let prevType = typeof prevElement;

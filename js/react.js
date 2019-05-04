@@ -4,19 +4,18 @@ let readyEvent = new Event('mountReady');
 
 class ReactClass {
   constructor(props) {
-    this._reactInternalInstance = null;
     this.props = props;
-    this.state = this.getInitialState ? this.getInitialState() : null;
+    this.state = null;
+    this._reactInternalInstance = null;
   }
   setState(newState) {
-    //还记得我们在ReactCompositeComponent里面mount的时候 做了赋值
-    //所以这里可以拿到 对应的ReactCompositeComponent的实例_reactInternalInstance
+    //还记得我们在ReactCompositeComponent里面mount的时候 做了赋值,所以这里可以拿到 对应的ReactCompositeComponent的实例_reactInternalInstance
     this._reactInternalInstance.receiveComponent(null, newState);
   }
   getInitialState() { }
   componentWillMount() { }
   componentDidMount() { }
-  shouldComponentUpdate() { }
+  shouldComponentUpdate() {return true }
   render() { }
 }
 class ReactElement {
@@ -29,6 +28,7 @@ class ReactElement {
 
 class React {
   static nextReactRootIndex = 0;
+  /**创建虚拟DOM */
   static createElement(type, config, ...children) {
     let props = {};
     let key = (config && config.key) || null;
@@ -36,11 +36,11 @@ class React {
     props.children = children.flat();
     return new ReactElement(type, key, props);
   }
-  static render(el, container) {
-    let componentIntance = instantiateReactComponent(el);
-    let html = componentIntance.mountComponent(this.nextReactRootIndex++);
-    container.innerHHML = "";
-    container.append(html);
+  static render(reactElement, container) {
+    let componentIntance = instantiateReactComponent(reactElement);
+    let htmlElement = componentIntance.mountComponent(this.nextReactRootIndex++);
+    container.innerHTML = "";
+    container.append(htmlElement);
     document.dispatchEvent(readyEvent);
   }
 }

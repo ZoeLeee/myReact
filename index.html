@@ -73,26 +73,29 @@
   <script>
 
     class TodoList extends ReactClass {
-      getInitialState() {
-        return { items: [],text: '' };
+      constructor(){
+        super();
+        this.state={
+          items: [],
+          text:"",
+        }
       }
       add = () => {
         var nextItems = this.state.items.concat([this.state.text]);
-        this.setState({ items: nextItems, text: '' });
+        this.setState({ items: nextItems, text:'' });
       }
       onChange(e){
         this.setState({ text: e.target.value });
       }
       render() {
         const createItem = function (itemText) {
-          return React.createElement("div", null, itemText);
+          return React.createElement("li", null, itemText);
         };
         let lists = this.state.items.map(createItem);
-        
-        let input = React.createElement("input", { onkeyup: this.onChange.bind(this), value: this.state.text });
-        let button = React.createElement("button", { onclick: this.add.bind(this) }, 'Add#' + (this.state.items.length + 1))
+        let input = React.createElement("input", { oninput: this.onChange.bind(this), value: this.state.text });
+        let button = React.createElement("button", { onClick: this.add.bind(this) }, 'Add')
         let children = [input, button].concat(lists)
-        return React.createElement("div", null, children);
+        return React.createElement("ul", null, children);
       }
     }
 

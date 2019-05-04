@@ -3,10 +3,22 @@
 class ReactComponent {
   constructor() {
     this._rootNodeID = null;
+    /**存放元素ReactElement对象 */
+    this._currentElement =null;
   }
   mountComponent(rootId) {
     //赋值标识
     this._rootNodeID = rootId;
+  }
+  removeAllEvent(com){
+    let el=document.querySelector('[data-reactid="' + com._rootNodeID + '"]');
+    let props=com._currentElement.props;
+    for (let propKey in props) {
+      if (/^on[A-Za-z]/.test(propKey)) {
+        let eventType = propKey.replace('on', '').toLowerCase();
+        el.removeEventListener(eventType, props[propKey]);
+      }
+    }
   }
 }
 
@@ -17,10 +29,10 @@ class ReactDOMTextComponent extends ReactComponent {
   }
   mountComponent(rootId) {
     super.mountComponent(rootId);
-    let span = document.createElement('span');
-    span.setAttribute('data-reactid', rootId);
-    span.innerText = this._currentElement;
-    return span;
+    let text = document.createElement('font');
+    text.setAttribute('data-reactid', rootId);
+    text.innerText = this._currentElement;
+    return text;
   }
   receiveComponent(nextText) {
     let nextStringText = '' + nextText;
@@ -33,11 +45,13 @@ class ReactDOMTextComponent extends ReactComponent {
   }
 }
 
+/**component类，用来表示文本在渲染，更新，删除时应该做些什么事情 */
 class ReactDomComponent extends ReactComponent {
   constructor(el) {
     super();
     this._currentElement = el;
   }
+  /**component渲染时生成的dom结构 */
   mountComponent(rootId) {
     super.mountComponent(rootId);
     let props = this._currentElement.props;
@@ -45,13 +59,16 @@ class ReactDomComponent extends ReactComponent {
     //假设都是html元素类型，没有自定义元素，父节点
     let parentElement = document.createElement(this._currentElement.type);
     parentElement.setAttribute("data-reactid", rootId);
-    for (let key in props) {
-      if (/^on[A-Za-z]/.test(key)) {
-        let eventType = key.replace('on', '').toLowerCase();
-        parentElement.addEventListener(eventType, props[key]);
+    for (let propKey in props) {
+      if (/^on[A-Za-z]/.test(propKey)) {
+        let eventType = propKey.replace('on', '').toLowerCase();
+        parentElement.addEventListener(eventType, props[propKey]);
       }
-      if (props[key] && key != 'children' && !/^on[A-Za-z]/.test(key)) {
-        parentElement.setAttribute(key, props[key]);
+      else if(this._currentElement.type==='input'&& propKey==="value"){
+        parentElement.value=props[propKey];
+      }
+      else if (props[propKey] && propKey != 'children') {
+        parentElement.setAttribute(propKey, props[propKey]);
       }
     }
 
@@ -60,12 +77,12 @@ class ReactDomComponent extends ReactComponent {
     let children = props.children || [];
     let childrenInstances = [];
     children.forEach((el, i) => {
-      let instanceCom = instantiateReactComponent(el);
-      instanceCom._mountIndex = i;
-      childrenInstances.push(instanceCom);
+      let instanceComponent = instantiateReactComponent(el);
+      instanceComponent._mountIndex = i;
+      childrenInstances.push(instanceComponent);
       //子节点的rootId是父节点的rootId加上新的key也就是顺序的值拼成的新值
       let childRootId = this._rootNodeID + '-' + i;
-      let childMarkup = instanceCom.mountComponent(childRootId);
+      let childMarkup = instanceComponent.mountComponent(childRootId);
       content.push(childMarkup);
     });
 
@@ -83,9 +100,8 @@ class ReactDomComponent extends ReactComponent {
 
     this._currentElement = nextElement;
     //需要单独的更新属性
-    // this._updateDOMProperties(lastProps, nextProps);
+    this._updateDOMProperties(lastProps, nextProps);
     //再更新子节点
-    console.log(nextElement.props.children);
     this._updateDOMChildren(nextElement.props.children);
   }
   _updateDOMProperties(lastProps, nextProps) {
@@ -128,6 +144,9 @@ class ReactDomComponent extends ReactComponent {
           oldElement.setAttribute(propKey, nextProps[propKey]);
         }
       }
+      if(this._currentElement.type==="input"&&propKey==='value'){
+        oldElement.value=nextProps[propKey]
+      }
     }
   }
   _updateDOMChildren(nextChildrenElements) {
@@ -150,21 +169,19 @@ class ReactDomComponent extends ReactComponent {
     //生成新的子节点的component对象集合，这里注意，会复用老的component对象
     var nextChildren = generateComponentChildren(prevChildren, nextChildrenElements);
     //重新赋值_renderedChildren，使用最新的。
-    this._renderedChildren = []
-    this._renderedChildren.push(...Object.values(nextChildren));
+    this._renderedChildren = [...Object.values(nextChildren)]
 
     let oldElement = document.querySelector('[data-reactid="' + this._rootNodeID + '"]');
-    var nextIndex = 0; //代表到达的新的节点的index
 
     /**注意新增代码**/
     var lastIndex = 0;//代表访问的最后一次的老的集合的位置
     var nextIndex = 0;//代表到达的新的节点的index
-
+    let name;
     //通过对比两个集合的差异，组装差异节点添加到队列中
-    for (let name in nextChildren) {
-      if (!nextChildren.hasOwnProperty(name)) {
-        continue;
-      }
+    for (name in nextChildren) {
+      // if (!nextChildren.hasOwnProperty(name)) {
+      //   continue;
+      // }
       var prevChild = prevChildren && prevChildren[name];
       var nextChild = nextChildren[name];
       //相同的话，说明是使用的同一个component,所以我们需要做移动的操作
@@ -179,8 +196,8 @@ class ReactDomComponent extends ReactComponent {
         })
         /**注意新增代码**/
         prevChild._mountIndex < lastIndex && diffQueue.push({
-          parentId: this._rootNodeID,
-          parentNode: $('[data-reactid=' + this._rootNodeID + ']'),
+          parentId: self._rootNodeID,
+          parentNode:oldElement,
           type: UPATE_TYPES.REMOVE_NODE,
           fromIndex: prevChild._mountIndex,
           toIndex: null
@@ -201,7 +218,7 @@ class ReactDomComponent extends ReactComponent {
 
           //如果以前已经渲染过了，记得先去掉以前所有的事件监听，通过命名空间全部清空
           if (prevChild._rootNodeID) {
-            //TODO:
+            this.removeAllEvent(prevChild);
           }
           /**注意新增代码**/
           lastIndex = Math.max(prevChild._mountIndex, lastIndex);
@@ -224,7 +241,7 @@ class ReactDomComponent extends ReactComponent {
 
     //对于老的节点里有，新的节点里没有的那些，也全都删除掉
     for (name in prevChildren) {
-      if (prevChildren.hasOwnProperty(name) && !(nextChildren && nextChildren.hasOwnProperty(name))) {
+      if (!(nextChildren.hasOwnProperty(name))) {
         //添加差异对象，类型：REMOVE_NODE
         diffQueue.push({
           parentId: self._rootNodeID,
@@ -235,8 +252,7 @@ class ReactDomComponent extends ReactComponent {
         })
         //如果以前已经渲染过了，记得先去掉以前所有的事件监听
         if (prevChildren[name]._rootNodeID) {
-          // $(document).undelegate('.' + prevChildren[name]._rootNodeID);
-          //TODO:
+          this.removeAllEvent(prevChildren[name]);
         }
       }
     }
@@ -252,12 +268,10 @@ class ReactDomComponent extends ReactComponent {
         let updatedIndex = update.fromIndex;
         let updatedChild = update.parentNode.children[updatedIndex];
         let parentID = update.parentId;
-
         //所有需要更新的节点都保存下来，方便后面使用
         initialChildren[parentID] = initialChildren[parentID] || [];
         //使用parentID作为简易命名空间
         initialChildren[parentID][updatedIndex] = updatedChild;
-
         //所有需要修改的节点先删除,对于move的，后面再重新插入到正确的位置即可
         deleteChildren.push(updatedChild)
       }
@@ -289,19 +303,21 @@ class ReactDomComponent extends ReactComponent {
 class ReactCompositeComponent extends ReactComponent {
   constructor(element) {
     super();
-    //存放对应的ReactClass的实例
-    this._instance = null;
     //存放元素element对象
     this._currentElement = element;
+    /**component组件 */
+    this._renderedComponent=null;
+    /**React组件实例 */
+    this._instance=null;
   }
   mountComponent(rootID) {
     super.mountComponent(rootID);
     //拿到当前元素对应的属性值
     let publicProps = this._currentElement.props;
     //拿到对应的ReactClass
-    let ReactClass = this._currentElement.type;
+    let ReactInstance = this._currentElement.type;
     // Initialize the public class
-    let inst = new ReactClass(publicProps);
+    let inst = new ReactInstance(publicProps);
 
     this._instance = inst;
     //保留对当前comonent的引用，下面更新会用到
@@ -345,8 +361,8 @@ class ReactCompositeComponent extends ReactComponent {
 
     let prevComponentInstance = this._renderedComponent;
     let prevRenderedElement = prevComponentInstance._currentElement;
-    //重新执行render拿到对应的新element;
 
+    //重新执行render拿到对应的新element;
     let nextRenderedElement = this._instance.render();
 
     //判断是需要更新还是直接就重新渲染
@@ -359,11 +375,10 @@ class ReactCompositeComponent extends ReactComponent {
     }
     else {
       //如果发现完全是不同的两种element，那就干脆重新渲染了
-      let thisID = this._rootNodeID;
       //重新new一个对应的component，
       this._renderedComponent = this._instantiateReactComponent(nextRenderedElement);
       //重新生成对应的元素内容
-      let nextMarkup = _renderedComponent.mountComponent(thisID);
+      let nextMarkup = _renderedComponent.mountComponent( this._rootNodeID);
       //替换整个节点
       document.querySelector('[data-reactid="' + this._rootNodeID + '"]').replaceWith(nextMarkup);
     }
@@ -371,17 +386,16 @@ class ReactCompositeComponent extends ReactComponent {
   }
 }
 
-function instantiateReactComponent(node) {
-  if (typeof node === 'string' || typeof node === 'number') {
-    return new ReactDOMTextComponent(node);
+function instantiateReactComponent(reactElement) {
+  if (typeof reactElement === 'string' || typeof reactElement === 'number') {
+    return new ReactDOMTextComponent(reactElement);
   }
-  if (typeof node === 'object' && typeof node.type === 'string') {
-    return new ReactDomComponent(node);
+  if (typeof reactElement === 'object' && typeof reactElement.type === 'string') {
+    return new ReactDomComponent(reactElement);
   }
   //自定义的元素节点
-  if (typeof node === 'object' && typeof node.type === 'function') {
+  if (typeof reactElement === 'object' && typeof reactElement.type === 'function') {
     //注意这里，使用新的component,专门针对自定义元素
-    return new ReactCompositeComponent(node);
+    return new ReactCompositeComponent(reactElement);
   }
-  
 }
